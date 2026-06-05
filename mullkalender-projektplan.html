@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Müllkalender — Projektplan</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg: #f5f2ec;
+  --ink: #1a1a18;
+  --muted: #7a7870;
+  --border: #ddd9d0;
+  --surface: #ffffff;
+  --surface2: #eeeae2;
+
+  --phase1: #1a1a18;
+  --phase2: #2d5016;
+  --phase3: #4a2800;
+  --phase4: #8b0000;
+
+  --tag-setup: #e8f4e8;
+  --tag-setup-txt: #2d5016;
+  --tag-backend: #fff3e0;
+  --tag-backend-txt: #e65100;
+  --tag-frontend: #e3f2fd;
+  --tag-frontend-txt: #0d47a1;
+  --tag-ai: #f3e5f5;
+  --tag-ai-txt: #4a148c;
+  --tag-deploy: #fce4ec;
+  --tag-deploy-txt: #880e4f;
+  --tag-polish: #e0f2f1;
+  --tag-polish-txt: #004d40;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 48px 24px;
+}
+
+.container { max-width: 960px; margin: 0 auto; }
+
+/* HEADER */
+header { margin-bottom: 48px; }
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+h1 {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+h1 em { font-style: italic; color: var(--muted); }
+.meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.meta-item {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: var(--surface2);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+.meta-item strong { color: var(--ink); }
+.subtitle { color: var(--muted); font-size: 0.95rem; max-width: 560px; line-height: 1.6; }
+
+/* PROGRESS BAR */
+.progress-wrap { margin-bottom: 48px; }
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 8px;
+}
+.progress-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--ink);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* PHASES HEADER */
+.phases-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 40px;
+}
+.phase-chip {
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.phase-chip.active, .phase-chip:hover { border-color: var(--ink); }
+.phase-chip-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.phase-chip-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.phase-chip-dates {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.phase-chip[data-phase="1"] { background: #f0efe9; }
+.phase-chip[data-phase="2"] { background: #eef4e8; }
+.phase-chip[data-phase="3"] { background: #fdf3e7; }
+.phase-chip[data-phase="4"] { background: #fdecea; }
+
+/* WEEK SECTIONS */
+.week-section { margin-bottom: 40px; }
+.week-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--border);
+}
+.week-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: var(--surface2);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.week-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.3rem;
+  font-weight: 400;
+}
+.week-goal {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+  max-width: 200px;
+  text-align: right;
+}
+
+/* DAY CARDS */
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.day-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.day-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.07);
+}
+.day-card.today {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #f5f2ec;
+}
+.day-card.today .day-date,
+.day-card.today .task-tag,
+.day-card.today .standup-label { color: rgba(245,242,236,0.6); }
+.day-card.today .day-name { color: #f5f2ec; }
+.day-card.today .task-item { color: rgba(245,242,236,0.85); }
+.day-card.today .task-tag {
+  background: rgba(255,255,255,0.1) !important;
+  color: rgba(245,242,236,0.7) !important;
+}
+.day-card.weekend {
+  background: var(--surface2);
+  opacity: 0.7;
+}
+.day-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.day-name {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+.day-date {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.day-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.badge-start { background: #1a1a18; color: #f5f2ec; }
+.badge-freeze { background: #8b0000; color: white; }
+.badge-demo { background: #2d5016; color: white; }
+.badge-standup { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+.tasks { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.83rem;
+  line-height: 1.4;
+  color: #3a3a36;
+}
+.task-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+.task-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.task-tag {
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: 'DM Mono', monospace;
+}
+.tag-setup { background: var(--tag-setup); color: var(--tag-setup-txt); }
+.tag-backend { background: var(--tag-backend); color: var(--tag-backend-txt); }
+.tag-frontend { background: var(--tag-frontend); color: var(--tag-frontend-txt); }
+.tag-ai { background: var(--tag-ai); color: var(--tag-ai-txt); }
+.tag-deploy { background: var(--tag-deploy); color: var(--tag-deploy-txt); }
+.tag-polish { background: var(--tag-polish); color: var(--tag-polish-txt); }
+
+.standup-box {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+.day-card.today .standup-box { border-top-color: rgba(255,255,255,0.15); }
+.standup-label {
+  font-size: 0.65rem;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+.standup-text {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+  font-style: italic;
+}
+.day-card.today .standup-text { color: rgba(245,242,236,0.6); }
+
+/* MILESTONE BANNER */
+.milestone {
+  background: var(--ink);
+  color: #f5f2ec;
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.milestone-icon { font-size: 1.5rem; flex-shrink: 0; }
+.milestone-title { font-family: 'Instrument Serif', serif; font-size: 1.1rem; }
+.milestone-sub { font-size: 0.78rem; color: rgba(245,242,236,0.6); margin-top: 2px; }
+.milestone-date {
+  margin-left: auto;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  color: rgba(245,242,236,0.5);
+  flex-shrink: 0;
+}
+
+/* LEGEND */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 40px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.legend-title {
+  font-size: 0.72rem;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: gap;
+  gap: 12px;
+}
+footer p { font-size: 0.78rem; color: var(--muted); }
+footer span { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-top">
+      <div>
+        <h1>Müllkalender App<br/><em>Projektplan</em></h1>
+      </div>
+      <div class="meta">
+        <div class="meta-item">Start: <strong>05.06.2026</strong></div>
+        <div class="meta-item">Code Freeze: <strong>24.06.2026</strong></div>
+        <div class="meta-item">Präsentation: <strong>25.06.2026</strong></div>
+        <div class="meta-item">Dauer: <strong>20 Tage</strong></div>
+      </div>
+    </div>
+    <p class="subtitle">MERN Stack · React · Express · MongoDB · Claude Vision API · Scraping SWE Erfurt</p>
+  </header>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Projektfortschritt</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <span class="legend-title">Kategorien</span>
+    <span class="task-tag tag-setup">Setup</span>
+    <span class="task-tag tag-backend">Backend</span>
+    <span class="task-tag tag-frontend">Frontend</span>
+    <span class="task-tag tag-ai">IA / AI</span>
+    <span class="task-tag tag-deploy">Deploy</span>
+    <span class="task-tag tag-polish">Polish</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       WOCHE 1 — FUNDAMENT
+  ═══════════════════════════════════════════ -->
+  <div class="week-section">
+    <div class="week-header">
+      <span class="week-num">KW 24</span>
+      <h2 class="week-title">Woche 1 — Fundament & Setup</h2>
+      <span class="week-goal">Ziel: App läuft lokal, DB verbunden</span>
+    </div>
+
+    <div class="days-grid">
+
+      <!-- DO 05.06 -->
+      <div class="day-card today">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Donnerstag</div>
+            <div class="day-date">05.06.2026</div>
+          </div>
+          <span class="day-badge badge-start">▶ Start</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Projektidee im Kurs präsentieren</div>
+          <div class="task-item"><div class="task-dot"></div>Gruppe bilden oder Solo bestätigen</div>
+          <div class="task-item"><div class="task-dot"></div>GitHub Repo erstellen (MERN Boilerplate)</div>
+          <div class="task-item"><div class="task-dot"></div>Network Tab von abfallkalender.stadtwerke-erfurt.de analysieren</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-setup">Setup</span>
+        </div>
+      </div>
+
+      <!-- FR 06.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Freitag</div>
+            <div class="day-date">06.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Express + MongoDB Atlas verbinden</div>
+          <div class="task-item"><div class="task-dot"></div>Mongoose Schemas: Schedule, WasteItem, User</div>
+          <div class="task-item"><div class="task-dot"></div>Seed-Script mit 5–10 Erfurter Straßen</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-backend">Backend</span>
+          <span class="task-tag tag-setup">Setup</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Gestern: Repo & Analyse. Heute: DB-Verbindung + Schemas. Blocker: keiner."</div>
+        </div>
+      </div>
+
+      <!-- SA/SO -->
+      <div class="day-card weekend">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Wochenende</div>
+            <div class="day-date">07–08.06.2026</div>
+          </div>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Optional: React Vite-Projekt initialisieren</div>
+          <div class="task-item"><div class="task-dot"></div>Konzept & Wireframes skizzieren</div>
+        </div>
+      </div>
+
+      <!-- MO 09.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Montag</div>
+            <div class="day-date">09.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>React + Vite + TailwindCSS aufsetzen</div>
+          <div class="task-item"><div class="task-dot"></div>React Router: Routen definieren (Home, Calendar, Chat)</div>
+          <div class="task-item"><div class="task-dot"></div>AddressContext erstellen</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-frontend">Frontend</span>
+          <span class="task-tag tag-setup">Setup</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Gestern: Seed-Script. Heute: React Setup + Routing. Blocker: keiner."</div>
+        </div>
+      </div>
+
+      <!-- DI 10.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Dienstag</div>
+            <div class="day-date">10.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>GET /api/waste/:street Route bauen</div>
+          <div class="task-item"><div class="task-dot"></div>AddressSearch Komponente → API-Call</div>
+          <div class="task-item"><div class="task-dot"></div>Ergebnis im Frontend anzeigen (einfach)</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-backend">Backend</span>
+          <span class="task-tag tag-frontend">Frontend</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Gestern: React + Router. Heute: erste API-Route + Frontend verbinden."</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       WOCHE 2 — KERN-FEATURES
+  ═══════════════════════════════════════════ -->
+  <div class="week-section">
+    <div class="week-header">
+      <span class="week-num">KW 25</span>
+      <h2 class="week-title">Woche 2 — Kern-Features</h2>
+      <span class="week-goal">Ziel: Kalender + Scraping + Auth fertig</span>
+    </div>
+
+    <div class="days-grid">
+
+      <!-- MI 11.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Mittwoch</div>
+            <div class="day-date">11.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>WasteCalendar Komponente mit Farbkodierung</div>
+          <div class="task-item"><div class="task-dot"></div>Nächste Abholtermine hervorheben</div>
+          <div class="task-item"><div class="task-dot"></div>Wochenstreifen (7-Tage-Ansicht)</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-frontend">Frontend</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Gestern: API + Frontend verbunden. Heute: Kalender-Komponente mit Design."</div>
+        </div>
+      </div>
+
+      <!-- DO 12.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Donnerstag</div>
+            <div class="day-date">12.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Puppeteer installieren & testen</div>
+          <div class="task-item"><div class="task-dot"></div>Scraper für SWE-Seite bauen</div>
+          <div class="task-item"><div class="task-dot"></div>Ergebnisse in MongoDB cachen</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-backend">Backend</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Gestern: Kalender-UI. Heute: Scraping mit Puppeteer — kritischer Tag."</div>
+        </div>
+      </div>
+
+      <!-- FR 13.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Freitag</div>
+            <div class="day-date">13.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Präsentation</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Scraping-Ergebnis im Frontend zeigen</div>
+          <div class="task-item"><div class="task-dot"></div>Freitags-Präsentation: aktuellen Stand zeigen</div>
+          <div class="task-item"><div class="task-dot"></div>Feedback vom Instructor sammeln</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-backend">Backend</span>
+          <span class="task-tag tag-frontend">Frontend</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Freitags-Präsentation</div>
+          <div class="standup-text">"Demo: Adresse eingeben → echte Termine aus der SWE-Seite."</div>
+        </div>
+      </div>
+
+      <!-- MO 16.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Montag</div>
+            <div class="day-date">16.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>JWT Auth: Register + Login Routes</div>
+          <div class="task-item"><div class="task-dot"></div>AuthContext im React Frontend</div>
+          <div class="task-item"><div class="task-dot"></div>Adresse im User-Profil speichern</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-backend">Backend</span>
+          <span class="task-tag tag-frontend">Frontend</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Wochenende: Scraping stabilisiert. Heute: Auth-System aufbauen."</div>
+        </div>
+      </div>
+
+      <!-- DI 17.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Dienstag</div>
+            <div class="day-date">17.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>KI-Chat Route: POST /api/chat</div>
+          <div class="task-item"><div class="task-dot"></div>Claude API Integration (Textnachrichten)</div>
+          <div class="task-item"><div class="task-dot"></div>wasteItems aus DB als Kontext mitgeben</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-ai">IA / AI</span>
+          <span class="task-tag tag-backend">Backend</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Gestern: Auth fertig. Heute: KI-Chat Route mit Claude API."</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       WOCHE 3 — AI + POLISH
+  ═══════════════════════════════════════════ -->
+  <div class="week-section">
+    <div class="week-header">
+      <span class="week-num">KW 26</span>
+      <h2 class="week-title">Woche 3 — KI, Foto-Feature & Polish</h2>
+      <span class="week-goal">Ziel: Foto-Upload + finales Design</span>
+    </div>
+
+    <div class="days-grid">
+
+      <!-- MI 18.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Mittwoch</div>
+            <div class="day-date">18.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Chat-UI Komponente bauen</div>
+          <div class="task-item"><div class="task-dot"></div>Nachrichten-Verlauf im State verwalten</div>
+          <div class="task-item"><div class="task-dot"></div>Antwort der KI streamen / anzeigen</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-frontend">Frontend</span>
+          <span class="task-tag tag-ai">IA / AI</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Gestern: Claude API läuft. Heute: Chat-UI + Nachrichtenverlauf."</div>
+        </div>
+      </div>
+
+      <!-- DO 19.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Donnerstag</div>
+            <div class="day-date">19.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>📸 Foto-Upload im Chat (base64)</div>
+          <div class="task-item"><div class="task-dot"></div>Claude Vision API: Objekt erkennen</div>
+          <div class="task-item"><div class="task-dot"></div>"Welche Tonne?" — Antwort mit Farbe anzeigen</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-ai">IA / AI</span>
+          <span class="task-tag tag-frontend">Frontend</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Gestern: Chat fertig. Heute: Foto-Feature — das Highlight der App!"</div>
+        </div>
+      </div>
+
+      <!-- FR 20.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Freitag</div>
+            <div class="day-date">20.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Präsentation</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Deploy auf Render (Backend + Frontend)</div>
+          <div class="task-item"><div class="task-dot"></div>Freitags-Präsentation: Foto-Feature live zeigen</div>
+          <div class="task-item"><div class="task-dot"></div>Feedback für letzte Woche sammeln</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-deploy">Deploy</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Freitags-Präsentation</div>
+          <div class="standup-text">"Demo: Foto von Batterie hochladen → KI sagt: Sondermüll! 🎉"</div>
+        </div>
+      </div>
+
+      <!-- MO 23.06 -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Montag</div>
+            <div class="day-date">23.06.2026</div>
+          </div>
+          <span class="day-badge badge-standup">Standup</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Letzter Bug-Fix Tag</div>
+          <div class="task-item"><div class="task-dot"></div>UI/UX-Details & Responsive Design prüfen</div>
+          <div class="task-item"><div class="task-dot"></div>README.md schreiben</div>
+          <div class="task-item"><div class="task-dot"></div>Präsentationstext auf Deutsch vorbereiten</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-polish">Polish</span>
+          <span class="task-tag tag-deploy">Deploy</span>
+        </div>
+        <div class="standup-box">
+          <div class="standup-label">📢 Standup</div>
+          <div class="standup-text">"Letzter voller Tag. Fokus auf Stabilität, keine neuen Features."</div>
+        </div>
+      </div>
+
+      <!-- DI 24.06 — CODE FREEZE -->
+      <div class="day-card">
+        <div class="day-card-top">
+          <div>
+            <div class="day-name">Dienstag</div>
+            <div class="day-date">24.06.2026</div>
+          </div>
+          <span class="day-badge badge-freeze">❄️ Freeze</span>
+        </div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>⛔ Kein neuer Code nach 12:00 Uhr</div>
+          <div class="task-item"><div class="task-dot"></div>Finaler Deploy + alle Env-Variablen prüfen</div>
+          <div class="task-item"><div class="task-dot"></div>Demo-Flow komplett durchspielen</div>
+          <div class="task-item"><div class="task-dot"></div>Präsentation üben (5–7 Minuten)</div>
+        </div>
+        <div class="task-tags">
+          <span class="task-tag tag-polish">Polish</span>
+          <span class="task-tag tag-deploy">Deploy</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MILESTONE — PRÄSENTATION -->
+  <div class="milestone">
+    <div class="milestone-icon">🎤</div>
+    <div>
+      <div class="milestone-title">Projektpräsentation & CDD</div>
+      <div class="milestone-sub">Demo-Day · Live-Präsentation vor Instructors und Klasse</div>
+    </div>
+    <div class="milestone-date">25.06.2026<br/>Donnerstagvormittag</div>
+  </div>
+
+  <!-- DEMO SCRIPT -->
+  <div class="week-section" style="margin-top:40px">
+    <div class="week-header">
+      <h2 class="week-title">Präsentations-Script</h2>
+      <span class="week-goal">5–7 Minuten Demo-Flow</span>
+    </div>
+    <div class="days-grid">
+      <div class="day-card">
+        <div class="day-card-top"><div class="day-name">1. Problem</div></div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Persönliche Geschichte erzählen: als Expat in Erfurt ankommen, Mülltrennung verstehen müssen</div>
+          <div class="task-item"><div class="task-dot"></div>~1 Minute</div>
+        </div>
+      </div>
+      <div class="day-card">
+        <div class="day-card-top"><div class="day-name">2. Live Demo</div></div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>Adresse eingeben → Termine anzeigen</div>
+          <div class="task-item"><div class="task-dot"></div>Chat: "Wo kommt eine Batterie rein?"</div>
+          <div class="task-item"><div class="task-dot"></div>📸 Foto hochladen → KI antwortet</div>
+          <div class="task-item"><div class="task-dot"></div>~3 Minuten</div>
+        </div>
+      </div>
+      <div class="day-card">
+        <div class="day-card-top"><div class="day-name">3. Technik</div></div>
+        <div class="tasks">
+          <div class="task-item"><div class="task-dot"></div>MERN Stack kurz erklären</div>
+          <div class="task-item"><div class="task-dot"></div>Scraping-Strategie erwähnen</div>
+          <div class="task-item"><div class="task-dot"></div>Claude Vision API für Foto-Feature</div>
+          <div class="task-item"><div class="task-dot"></div>~2 Minuten</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>MüllKalender App — WBS Coding School Erfurt · Abschlussphase 2026</p>
+    <span>Code Freeze 24.06 · Demo Day 25.06</span>
+  </footer>
+
+</div>
+
+<script>
+  // Calculate progress based on today's date
+  const start = new Date('2026-06-05');
+  const end = new Date('2026-06-24');
+  const today = new Date();
+  const total = end - start;
+  const elapsed = Math.min(Math.max(today - start, 0), total);
+  const pct = Math.round((elapsed / total) * 100);
+
+  setTimeout(() => {
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-pct').textContent = pct + '%';
+  }, 300);
+</script>
+</body>
+</html>
