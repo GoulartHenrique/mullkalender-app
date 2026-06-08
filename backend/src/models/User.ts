@@ -12,7 +12,7 @@ export interface IUser extends Document {
     enabled: boolean;
     daysBefore: number;
   };
-  language: "de" | "en" | "pt";
+  language: "de" | "en";
 }
 
 const UserSchema = new Schema<IUser>(
