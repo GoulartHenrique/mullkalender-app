@@ -5,7 +5,14 @@ import User from "../models/User";
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log("Register body:", req.body); // temporary log
+
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      res.status(400).json({ error: "Email and password are required" });
+      return;
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -18,13 +25,21 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     res.status(201).json({ message: "User created", userId: user._id });
   } catch (error) {
+    console.error("Register error:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log("Login body:", req.body); // temporary log
+
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      res.status(400).json({ error: "Email and password are required" });
+      return;
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -46,6 +61,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({ token, userId: user._id });
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
