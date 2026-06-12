@@ -1,8 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function Navbar() {
   const { isAuthenticated, logout } = useAuth();
+  const location = useLocation();
+
+  const isActive = (path: string) =>
+    location.pathname === path ? "text-green-400" : "text-gray-400 hover:text-white";
 
   return (
     <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
@@ -11,10 +15,10 @@ function Navbar() {
       </Link>
 
       <div className="flex items-center gap-6">
-        <Link to="/" className="text-gray-400 hover:text-white text-sm transition">
+        <Link to="/" className={`${isActive("/")} text-sm transition`}>
           Kalender
         </Link>
-        <Link to="/chat" className="text-gray-400 hover:text-white text-sm transition">
+        <Link to="/chat" className={`${isActive("/chat")} text-sm transition`}>
           KI-Chat
         </Link>
 

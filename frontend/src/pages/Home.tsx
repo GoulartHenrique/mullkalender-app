@@ -11,6 +11,10 @@ function Home() {
     navigate(`/schedule?street=${street}&hnr=${hnr}`);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSearch();
+  };
+
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center px-4">
       <div className="text-center mb-10">
@@ -32,6 +36,7 @@ function Home() {
           placeholder="Straße"
           value={street}
           onChange={(e) => setStreet(e.target.value)}
+          onKeyDown={handleKeyDown}
           className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-400"
         />
         <input
@@ -39,6 +44,7 @@ function Home() {
           placeholder="Nr."
           value={hnr}
           onChange={(e) => setHnr(e.target.value)}
+          onKeyDown={handleKeyDown}
           className="w-20 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-400"
         />
         <button
@@ -48,6 +54,19 @@ function Home() {
           Suchen →
         </button>
       </div>
+
+      <p className="text-gray-600 text-sm mt-4">
+        Beispiele: <span
+          className="text-gray-400 cursor-pointer hover:text-green-400 transition"
+          onClick={() => { setStreet("Anger"); setHnr("1"); }}
+        >Anger</span>, <span
+          className="text-gray-400 cursor-pointer hover:text-green-400 transition"
+          onClick={() => { setStreet("Bahnhofstraße"); setHnr("1"); }}
+        >Bahnhofstraße</span>, <span
+          className="text-gray-400 cursor-pointer hover:text-green-400 transition"
+          onClick={() => { setStreet("Krämerbrücke"); setHnr("1"); }}
+        >Krämerbrücke</span>
+      </p>
     </div>
   );
 }
