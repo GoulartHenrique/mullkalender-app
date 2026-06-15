@@ -4,6 +4,9 @@ import Home from "./pages/Home";
 import Schedule from "./pages/Schedule";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Chat from "./pages/Chat";
+import AbfallABC from "./pages/AbfallABC";
+
 
 function App() {
   return (
@@ -14,6 +17,8 @@ function App() {
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/abfall-abc" element={<AbfallABC />} />
       </Routes>
     </>
   );

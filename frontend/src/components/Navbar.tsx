@@ -18,6 +18,9 @@ function Navbar() {
         <Link to="/" className={`${isActive("/")} text-sm transition`}>
           Kalender
         </Link>
+        <Link to="/abfall-abc" className={`${isActive("/abfall-abc")} text-sm transition`}>
+          Abfall-ABC
+        </Link>
         <Link to="/chat" className={`${isActive("/chat")} text-sm transition`}>
           KI-Chat
         </Link>
