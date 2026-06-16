@@ -72,7 +72,7 @@ function Chat() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 flex flex-col gap-4 mb-4 overflow-y-auto min-h-[300px]">
+        <div className="flex-1 flex flex-col gap-4 mb-4 overflow-y-auto min-h-75">
           {messages.map((msg, i) => (
             <div
               key={i}

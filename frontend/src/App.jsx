@@ -6,6 +6,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Chat from "./pages/Chat";
 import AbfallABC from "./pages/AbfallABC";
+import Map from "./pages/Map";
+
 
 
 function App() {
@@ -19,6 +21,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/abfall-abc" element={<AbfallABC />} />
+        <Route path="/map" element={<Map />} />
       </Routes>
     </>
   );

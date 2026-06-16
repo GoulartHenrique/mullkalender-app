@@ -98,6 +98,30 @@ function Home() {
     if (e.key === "Enter") handleSend();
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      const mimeType = file.type;
+
+      setMessages((prev) => [...prev, { role: "user", content: "📷 Foto gesendet" }]);
+      setChatLoading(true);
+
+      try {
+        const res = await api.post("/api/ai/photo", { image: base64, mimeType });
+        setMessages((prev) => [...prev, { role: "ai", content: res.data.reply }]);
+      } catch {
+        setMessages((prev) => [...prev, { role: "ai", content: "Es gab einen Fehler. Bitte versuche es erneut." }]);
+      } finally {
+        setChatLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Weekly strip logic
   const today = new Date();
   const dayOfWeek = today.getDay();
@@ -307,7 +331,17 @@ function Home() {
             </div>
           )}
 
-          <div className="px-4 py-3 border-t border-gray-800 flex gap-3">
+          {/* Input */}
+          <div className="px-4 py-3 border-t border-gray-800 flex gap-3 items-center">
+            <label className="cursor-pointer text-gray-400 hover:text-green-400 transition text-xl">
+              📷
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
+            </label>
             <input
               type="text"
               placeholder="Wo kommt... rein? Wann wird... abgeholt?"

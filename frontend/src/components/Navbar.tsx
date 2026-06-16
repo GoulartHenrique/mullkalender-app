@@ -21,6 +21,9 @@ function Navbar() {
         <Link to="/abfall-abc" className={`${isActive("/abfall-abc")} text-sm transition`}>
           Abfall-ABC
         </Link>
+        <Link to="/map" className={`${isActive("/map")} text-sm transition`}>
+          Karte
+        </Link>
         <Link to="/chat" className={`${isActive("/chat")} text-sm transition`}>
           KI-Chat
         </Link>
