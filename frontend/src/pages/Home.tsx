@@ -49,7 +49,7 @@ function Home() {
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleError, setScheduleError] = useState("");
   const [messages, setMessages] = useState<Message[]>([
-    { role: "ai", content: "Hallo! Ich helfe dir bei Fragen zur Mülltrennung in Erfurt. Was möchtest du wissen? 🗑️" },
+    { role: "ai", content: "Hallo! Ich helfe Ihnen bei Fragen zur Mülltrennung in Erfurt. Was möchten Sie wissen? 🗑️" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -149,7 +149,7 @@ function Home() {
             <span className="text-green-400">Termine nie vergessen</span>
           </h1>
           <p className="text-gray-400 text-lg max-w-xl mx-auto">
-            Gib deine Adresse ein und sieh sofort, wann welche Tonne abgeholt wird. Frag unsere KI, wohin jedes Teil gehört.
+            Geben Sie Ihre Adresse ein und sehen Sie sofort, wann welche Tonne abgeholt wird. Fragen Sie unsere KI, wohin jedes Teil gehört.
           </p>
         </div>
 

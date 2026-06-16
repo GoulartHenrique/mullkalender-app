@@ -2,10 +2,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const askAI = async (question: string, context: string): Promise<string> => {
-const prompt = `You are a waste sorting assistant for the city of Erfurt, Germany.
+  const prompt = `You are a waste sorting assistant for the city of Erfurt, Germany.
 You ONLY answer questions about waste separation, recycling, and trash collection in Erfurt.
-If the user asks about anything else, politely decline in German and redirect them to ask about waste sorting.
-Answer always in German. Be concise and helpful.
+If the user asks about anything else, politely decline in German using formal "Sie" and redirect them to ask about waste sorting.
+Always answer in German using formal "Sie" form. Be concise and helpful.
 
 Here is some context about waste items:
 ${context}
@@ -25,7 +25,6 @@ User question: ${question}`;
   });
 
   const data = await response.json() as any;
-
   return data.choices?.[0]?.message?.content ?? "Keine Antwort erhalten.";
 };
 
@@ -48,7 +47,7 @@ export const askAIWithPhoto = async (base64Image: string, mimeType: string): Pro
             },
             {
               type: "text",
-              text: "Du bist ein Mülltrennungs-Assistent für Erfurt. Identifiziere das Objekt im Bild und sage mir, in welche Tonne es gehört: Biotonne, Gelber Sack, Papiertonne, Restmüll oder Sondermüll. Antworte auf Deutsch und sei kurz.",
+              text: "Sie sind ein Mülltrennungs-Assistent für Erfurt. Identifizieren Sie das Objekt im Bild und sagen Sie mir, in welche Tonne es gehört: Biotonne, Gelber Sack, Papiertonne, Restmüll oder Sondermüll. Antworten Sie auf Deutsch mit der formalen Sie-Form und fassen Sie sich kurz.",
             },
           ],
         },
@@ -57,6 +56,5 @@ export const askAIWithPhoto = async (base64Image: string, mimeType: string): Pro
   });
 
   const data = await response.json() as any;
-  console.log("Groq photo response:", JSON.stringify(data));
   return data.choices?.[0]?.message?.content ?? "Keine Antwort erhalten.";
 };

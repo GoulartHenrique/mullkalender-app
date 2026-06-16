@@ -2,7 +2,6 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -43,10 +42,9 @@ function Map() {
       <div className="max-w-3xl mx-auto px-4 py-10">
         <h2 className="text-2xl font-bold mb-2">Wertstoffhöfe in Erfurt</h2>
         <p className="text-gray-400 text-sm mb-6">
-          Hier kannst du Sondermüll, Elektrogeräte und Sperrmüll kostenlos abgeben.
+          Hier können Sie Sondermüll, Elektrogeräte und Sperrmüll kostenlos abgeben.
         </p>
 
-        {/* Map */}
         <div className="rounded-2xl overflow-hidden border border-gray-800 mb-8" style={{ height: "400px" }}>
           <MapContainer
             center={[50.9847, 11.0297]}
@@ -69,7 +67,6 @@ function Map() {
           </MapContainer>
         </div>
 
-        {/* Cards */}
         <div className="flex flex-col gap-4">
           {wertstoffhoefe.map((w) => (
             <div key={w.name} className="bg-gray-900 border border-gray-800 rounded-2xl p-5">

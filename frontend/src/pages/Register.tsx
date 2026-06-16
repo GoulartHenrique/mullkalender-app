@@ -15,7 +15,7 @@ function Register() {
       setSuccess(true);
       setTimeout(() => navigate("/login"), 2000);
     } catch {
-      setError("Registrierung fehlgeschlagen. Versuche es erneut.");
+      setError("Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.");
     }
   };
 
@@ -23,7 +23,7 @@ function Register() {
     <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-4">
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-md">
         <h2 className="text-2xl font-bold mb-2">Registrieren</h2>
-        <p className="text-gray-400 text-sm mb-6">Erstelle dein Konto</p>
+        <p className="text-gray-400 text-sm mb-6">Erstellen Sie Ihr Konto</p>
 
         {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
         {success && <p className="text-green-400 text-sm mb-4">Erfolgreich registriert! Weiterleitung...</p>}
