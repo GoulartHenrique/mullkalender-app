@@ -24,9 +24,11 @@ function Chat() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+useEffect(() => {
+  if (messages.length > 1) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }
+}, [messages]);
 
   const handleSend = async (text?: string) => {
     const message = text ?? input;
@@ -82,7 +84,7 @@ function Chat() {
           </div>
 
           {/* Messages */}
-          <div className="flex flex-col gap-4 p-5 overflow-y-auto flex-1 min-h-[300px]">
+          <div className="flex flex-col gap-4 p-5 overflow-y-auto flex-1 min-h-75">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className="max-w-sm px-4 py-3 rounded-2xl text-sm leading-relaxed"

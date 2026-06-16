@@ -65,9 +65,11 @@ function Home() {
   const [chatLoading, setChatLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+useEffect(() => {
+  if (messages.length > 1) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }
+}, [messages]);
 
   const handleSearch = async () => {
     if (!street) return;
