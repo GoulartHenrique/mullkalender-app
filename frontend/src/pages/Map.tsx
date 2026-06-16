@@ -2,6 +2,15 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+const accent = "#00aaff";
+
+const glassCard = {
+  background: "rgba(20, 30, 45, 0.4)",
+  backdropFilter: "blur(12px)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: "16px",
+};
+
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -38,19 +47,32 @@ const wertstoffhoefe = [
 
 function Map() {
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-3xl mx-auto px-4 py-10">
-        <h2 className="text-2xl font-bold mb-2">Wertstoffhöfe in Erfurt</h2>
-        <p className="text-gray-400 text-sm mb-6">
-          Hier können Sie Sondermüll, Elektrogeräte und Sperrmüll kostenlos abgeben.
-        </p>
+    <div className="min-h-screen text-white relative overflow-hidden" style={{
+      backgroundImage: "url('/bg.jpg')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    }}>
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "linear-gradient(to bottom, rgba(6,11,19,0.65) 0%, rgba(6,11,19,0.45) 50%, rgba(6,11,19,0.75) 100%)"
+      }} />
 
-        <div className="rounded-2xl overflow-hidden border border-gray-800 mb-8" style={{ height: "400px" }}>
-          <MapContainer
-            center={[50.9847, 11.0297]}
-            zoom={12}
-            style={{ height: "100%", width: "100%" }}
-          >
+      <div className="relative max-w-3xl mx-auto px-4 py-10">
+
+        {/* Header */}
+        <div className="w-full px-6 py-5 mb-6" style={glassCard}>
+          <h2 className="text-2xl font-bold mb-2">Wertstoffhöfe in Erfurt</h2>
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+            Hier können Sie Sondermüll, Elektrogeräte und Sperrmüll kostenlos abgeben.
+          </p>
+        </div>
+
+        {/* Map */}
+        <div className="overflow-hidden mb-6" style={{
+          ...glassCard,
+          height: "400px",
+          padding: 0,
+        }}>
+          <MapContainer center={[50.9847, 11.0297]} zoom={12} style={{ height: "100%", width: "100%" }}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -67,15 +89,17 @@ function Map() {
           </MapContainer>
         </div>
 
+        {/* Cards */}
         <div className="flex flex-col gap-4">
           {wertstoffhoefe.map((w) => (
-            <div key={w.name} className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+            <div key={w.name} className="p-5" style={glassCard}>
               <h3 className="font-bold text-sm mb-1">{w.name}</h3>
-              <p className="text-gray-400 text-xs mb-1">📍 {w.address}</p>
-              <p className="text-gray-400 text-xs mb-3">🕐 {w.hours}</p>
+              <p className="text-xs mb-1" style={{ color: "rgba(255,255,255,0.5)" }}>📍 {w.address}</p>
+              <p className="text-xs mb-3" style={{ color: "rgba(255,255,255,0.5)" }}>🕐 {w.hours}</p>
               <div className="flex flex-wrap gap-2">
                 {w.accepts.map((item) => (
-                  <span key={item} className="text-xs bg-green-400/10 text-green-400 border border-green-400/20 px-2 py-0.5 rounded-lg">
+                  <span key={item} className="text-xs px-2 py-0.5 rounded-lg"
+                    style={{ background: "rgba(0,170,255,0.1)", color: accent, border: "1px solid rgba(0,170,255,0.3)" }}>
                     {item}
                   </span>
                 ))}
@@ -83,6 +107,7 @@ function Map() {
             </div>
           ))}
         </div>
+
       </div>
     </div>
   );

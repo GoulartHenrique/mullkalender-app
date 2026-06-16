@@ -1,49 +1,93 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+
+const accent = "#00aaff";
 
 function Navbar() {
   const { isAuthenticated, logout } = useAuth();
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const isActive = (path: string) =>
-    location.pathname === path ? "text-green-400" : "text-gray-400 hover:text-white";
+  const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-      <Link to="/" className="text-white font-bold text-xl">
-        Müll<span className="text-green-400">Kalender</span>
-      </Link>
-
-      <div className="flex items-center gap-6">
-        <Link to="/" className={`${isActive("/")} text-sm transition`}>
-          Kalender
-        </Link>
-        <Link to="/abfall-abc" className={`${isActive("/abfall-abc")} text-sm transition`}>
-          Abfall-ABC
-        </Link>
-        <Link to="/map" className={`${isActive("/map")} text-sm transition`}>
-          Karte
-        </Link>
-        <Link to="/chat" className={`${isActive("/chat")} text-sm transition`}>
-          KI-Chat
+<nav className="px-4 sm:px-6 py-4" style={{
+  background: "linear-gradient(to bottom, #060B15 0%, #0a1628 100%)",
+  backdropFilter: "blur(16px)",
+  borderBottom: "1px solid rgba(0,170,255,0.2)",
+}}>
+<div className="flex items-center justify-between w-full">
+          <Link to="/" className="text-white font-bold text-xl">
+          Müll<span style={{ color: accent }}>Kalender</span>
         </Link>
 
-        {isAuthenticated ? (
-          <button
-            onClick={logout}
-            className="text-gray-400 hover:text-white text-sm transition"
-          >
-            Abmelden
-          </button>
-        ) : (
-          <Link
-            to="/login"
-            className="bg-green-400 text-gray-950 font-semibold px-4 py-2 rounded-lg text-sm hover:opacity-80 transition"
-          >
-            Anmelden
-          </Link>
-        )}
+        {/* Desktop menu */}
+        <div className="hidden sm:flex items-center gap-6">
+          {[
+            { path: "/", label: "Kalender" },
+            { path: "/abfall-abc", label: "Abfall-ABC" },
+            { path: "/map", label: "Karte" },
+            { path: "/chat", label: "KI-Chat" },
+          ].map(({ path, label }) => (
+            <Link key={path} to={path} className="text-sm transition"
+              style={{ color: isActive(path) ? accent : "rgba(255,255,255,0.5)" }}>
+              {label}
+            </Link>
+          ))}
+          {isAuthenticated ? (
+            <button onClick={logout} className="text-sm transition"
+              style={{ color: "rgba(255,255,255,0.5)" }}>
+              Abmelden
+            </button>
+          ) : (
+            <Link to="/login" className="font-semibold px-4 py-2 rounded-lg text-sm transition"
+              style={{ background: accent, color: "#060b13" }}>
+              Anmelden
+            </Link>
+          )}
+        </div>
+
+        {/* Mobile hamburger */}
+        <button className="sm:hidden text-lg transition"
+          style={{ color: "rgba(255,255,255,0.6)" }}
+          onClick={() => setMenuOpen(!menuOpen)}>
+          {menuOpen ? "✕" : "☰"}
+        </button>
       </div>
+
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div className="sm:hidden flex flex-col items-end gap-4 pt-4 pb-2 mt-4"
+          style={{ borderTop: "1px solid rgba(0,170,255,0.15)" }}>
+          {[
+            { path: "/", label: "Kalender" },
+            { path: "/abfall-abc", label: "Abfall-ABC" },
+            { path: "/map", label: "Karte" },
+            { path: "/chat", label: "KI-Chat" },
+          ].map(({ path, label }) => (
+            <Link key={path} to={path} className="text-sm transition"
+              style={{ color: isActive(path) ? accent : "rgba(255,255,255,0.5)" }}
+              onClick={() => setMenuOpen(false)}>
+              {label}
+            </Link>
+          ))}
+          {isAuthenticated ? (
+            <button onClick={() => { logout(); setMenuOpen(false); }}
+              className="text-sm transition"
+              style={{ color: "rgba(255,255,255,0.5)" }}>
+              Abmelden
+            </button>
+          ) : (
+            <Link to="/login"
+              className="font-semibold px-4 py-2 rounded-lg text-sm transition"
+              style={{ background: accent, color: "#060b13" }}
+              onClick={() => setMenuOpen(false)}>
+              Anmelden
+            </Link>
+          )}
+        </div>
+      )}
     </nav>
   );
 }
