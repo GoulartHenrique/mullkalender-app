@@ -10,6 +10,18 @@ const glassCard: React.CSSProperties = {
   borderRadius: "16px",
 };
 
+interface HouseNumberOption {
+  hnrId: number;
+  label: string;
+}
+
+interface StreetOption {
+  _id: string;
+  name: string;
+  strId: number;
+  houseNumbers: HouseNumberOption[];
+}
+
 interface ProfileData {
   email: string;
   address: { street: string; houseNumber: string; city: string };
@@ -24,11 +36,35 @@ function Profile() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
+  // Street autocomplete state
+  const [streetQuery, setStreetQuery] = useState("");
+  const [streetSuggestions, setStreetSuggestions] = useState<StreetOption[]>([]);
+  const [showStreetSuggestions, setShowStreetSuggestions] = useState(false);
+  const [selectedStreet, setSelectedStreet] = useState<StreetOption | null>(null);
+  const [showHouseNumberOptions, setShowHouseNumberOptions] = useState(false);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const res = await api.get("/api/user/profile");
         setProfile(res.data);
+
+        // If the user already has a saved favorite address, pre-fill the
+        // street search field and resolve it against the streets DB so
+        // the house number dropdown is available right away too.
+        const savedStreet = res.data.address?.street;
+        if (savedStreet) {
+          setStreetQuery(savedStreet);
+          try {
+            const streetRes = await api.get(`/api/streets/search?q=${encodeURIComponent(savedStreet)}`);
+            const matched: StreetOption | undefined = streetRes.data.find(
+              (s: StreetOption) => s.name === savedStreet
+            );
+            if (matched) setSelectedStreet(matched);
+          } catch {
+            // street lookup failed — user can still re-search manually
+          }
+        }
       } catch {
         setError("Profil konnte nicht geladen werden.");
       } finally {
@@ -37,6 +73,48 @@ function Profile() {
     };
     fetchProfile();
   }, []);
+
+  // Debounced street search against the local /api/streets/search endpoint
+  useEffect(() => {
+    if (streetQuery.trim().length < 2) {
+      setStreetSuggestions([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await api.get(`/api/streets/search?q=${encodeURIComponent(streetQuery)}`);
+        setStreetSuggestions(res.data);
+      } catch {
+        setStreetSuggestions([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [streetQuery]);
+
+  const handleSelectStreet = (street: StreetOption) => {
+    setSelectedStreet(street);
+    setStreetQuery(street.name);
+    setShowStreetSuggestions(false);
+    setShowHouseNumberOptions(true);
+    if (profile) {
+      setProfile({
+        ...profile,
+        address: { ...profile.address, street: street.name, houseNumber: "" },
+      });
+    }
+  };
+
+  const handleSelectHouseNumber = (houseNumber: HouseNumberOption) => {
+    setShowHouseNumberOptions(false);
+    if (profile) {
+      setProfile({
+        ...profile,
+        address: { ...profile.address, houseNumber: houseNumber.label },
+      });
+    }
+  };
 
   const handleSave = async () => {
     if (!profile) return;
@@ -100,26 +178,71 @@ function Profile() {
         {success && <p className="text-sm mb-4" style={{ color: accent }}>Profil erfolgreich gespeichert!</p>}
 
         {/* Address */}
-        <div className="p-5 mb-4" style={glassCard}>
+        <div className="p-5 mb-4 relative z-30" style={glassCard}>
           <h3 className="font-semibold mb-4">Lieblingsadresse</h3>
-          <div className="flex flex-col sm:flex-row gap-3">
+
+          <div className="relative mb-3">
             <input
               type="text"
-              placeholder="Straße"
-              value={profile.address.street}
-              onChange={(e) => setProfile({ ...profile, address: { ...profile.address, street: e.target.value } })}
-              className="flex-1 rounded-xl px-4 py-3 text-white text-sm focus:outline-none"
+              placeholder="Straße eingeben (z. B. Hans-Sailer)"
+              value={streetQuery}
+              onChange={(e) => {
+                setStreetQuery(e.target.value);
+                setShowStreetSuggestions(true);
+                setSelectedStreet(null);
+                if (profile) {
+                  setProfile({ ...profile, address: { ...profile.address, street: "", houseNumber: "" } });
+                }
+              }}
+              onFocus={() => setShowStreetSuggestions(true)}
+              className="w-full rounded-xl px-4 py-3 text-white text-sm focus:outline-none"
               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
             />
-            <input
-              type="text"
-              placeholder="Nr."
-              value={profile.address.houseNumber}
-              onChange={(e) => setProfile({ ...profile, address: { ...profile.address, houseNumber: e.target.value } })}
-              className="w-full sm:w-20 rounded-xl px-4 py-3 text-white text-sm focus:outline-none"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
-            />
+
+            {showStreetSuggestions && streetSuggestions.length > 0 && (
+              <div className="absolute z-50 mt-2 w-full max-h-60 overflow-y-auto rounded-xl"
+                style={{ background: "rgba(15, 22, 35, 0.95)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}>
+                {streetSuggestions.map((s) => (
+                  <button
+                    key={s._id}
+                    onClick={() => handleSelectStreet(s)}
+                    className="w-full text-left px-4 py-2.5 text-sm transition hover:bg-white/5"
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
+          {selectedStreet && (
+            <div className="relative">
+              <button
+                onClick={() => setShowHouseNumberOptions((prev) => !prev)}
+                className="w-full sm:w-40 rounded-xl px-4 py-3 text-left text-sm flex items-center justify-between"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+              >
+                <span>{profile.address.houseNumber ? `Nr. ${profile.address.houseNumber}` : "Hausnummer wählen"}</span>
+                <span style={{ color: "rgba(255,255,255,0.4)" }}>▾</span>
+              </button>
+
+              {showHouseNumberOptions && (
+                <div className="absolute z-50 mt-2 w-full sm:w-40 max-h-60 overflow-y-auto rounded-xl"
+                  style={{ background: "rgba(15, 22, 35, 0.95)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}>
+                  {selectedStreet.houseNumbers.map((h) => (
+                    <button
+                      key={h.hnrId}
+                      onClick={() => handleSelectHouseNumber(h)}
+                      className="w-full text-left px-4 py-2.5 text-sm transition hover:bg-white/5"
+                    >
+                      {h.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.4)" }}>
             Diese Adresse wird beim Anmelden automatisch geladen.
           </p>

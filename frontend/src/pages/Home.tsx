@@ -2,12 +2,25 @@ import { useState, useRef, useEffect } from "react";
 import { Bot } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { transformToScheduleEntries } from "../utils/scheduleTransform";
 
 interface WasteEntry {
   type: string;
   color: string;
   dates: string[];
   frequency: string;
+}
+
+interface HouseNumberOption {
+  hnrId: number;
+  label: string;
+}
+
+interface StreetOption {
+  _id: string;
+  name: string;
+  strId: number;
+  houseNumbers: HouseNumberOption[];
 }
 
 interface ScheduleData {
@@ -55,11 +68,21 @@ const glassCard: React.CSSProperties = {
 
 function Home() {
   const { isAuthenticated } = useAuth();
-  const [street, setStreet] = useState("");
-  const [hnr, setHnr] = useState("");
+
+  // Street autocomplete state
+  const [streetQuery, setStreetQuery] = useState("");
+  const [streetSuggestions, setStreetSuggestions] = useState<StreetOption[]>([]);
+  const [showStreetSuggestions, setShowStreetSuggestions] = useState(false);
+  const [selectedStreet, setSelectedStreet] = useState<StreetOption | null>(null);
+
+  // House number selection state
+  const [selectedHouseNumber, setSelectedHouseNumber] = useState<HouseNumberOption | null>(null);
+  const [showHouseNumberOptions, setShowHouseNumberOptions] = useState(false);
+
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleError, setScheduleError] = useState("");
+
   const [messages, setMessages] = useState<Message[]>([
     { role: "ai", content: "Hallo! Ich helfe Ihnen bei Fragen zur Mülltrennung in Erfurt. Was möchten Sie wissen? 🗑️" }
   ]);
@@ -73,6 +96,49 @@ function Home() {
     }
   }, [messages]);
 
+  // Debounced street search against the local /api/streets/search endpoint
+  useEffect(() => {
+    if (streetQuery.trim().length < 2) {
+      setStreetSuggestions([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await api.get(`/api/streets/search?q=${encodeURIComponent(streetQuery)}`);
+        setStreetSuggestions(res.data);
+      } catch {
+        setStreetSuggestions([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [streetQuery]);
+
+  // Fetches and transforms the live collection calendar for a chosen
+  // street + house number combination.
+  const fetchSchedule = async (street: StreetOption, houseNumber: HouseNumberOption) => {
+    setScheduleLoading(true);
+    setScheduleError("");
+    setScheduleData(null);
+    try {
+      const res = await api.get(
+        `/api/schedule/lookup?streetId=${street.strId}&houseNumberId=${houseNumber.hnrId}`
+      );
+      const entries = transformToScheduleEntries(res.data);
+      setScheduleData({
+        street: street.name,
+        houseNumber: houseNumber.label,
+        district: "Erfurt",
+        schedule: entries,
+      });
+    } catch {
+      setScheduleError("Termine konnten nicht geladen werden. Bitte versuchen Sie es erneut.");
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
   // Load favorite address and auto-search on login
   useEffect(() => {
     const loadFavoriteAddress = async () => {
@@ -81,16 +147,20 @@ function Home() {
         const res = await api.get("/api/user/profile");
         const fav = res.data.address;
         if (fav?.street) {
-          setStreet(fav.street);
-          setHnr(fav.houseNumber || "");
-          setScheduleLoading(true);
-          try {
-            const scheduleRes = await api.get(`/api/schedule?street=${fav.street}&hnr=${fav.houseNumber || ""}`);
-            setScheduleData(scheduleRes.data);
-          } catch {
-            // silently ignore if address not found in schedule DB
-          } finally {
-            setScheduleLoading(false);
+          const streetRes = await api.get(`/api/streets/search?q=${encodeURIComponent(fav.street)}`);
+          const matchedStreet: StreetOption | undefined = streetRes.data.find(
+            (s: StreetOption) => s.name === fav.street
+          );
+          if (matchedStreet) {
+            const matchedHouseNumber = matchedStreet.houseNumbers.find(
+              (h) => h.label === fav.houseNumber
+            );
+            setSelectedStreet(matchedStreet);
+            setStreetQuery(matchedStreet.name);
+            if (matchedHouseNumber) {
+              setSelectedHouseNumber(matchedHouseNumber);
+              fetchSchedule(matchedStreet, matchedHouseNumber);
+            }
           }
         }
       } catch {
@@ -98,25 +168,25 @@ function Home() {
       }
     };
     loadFavoriteAddress();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  const handleSearch = async () => {
-    if (!street) return;
-    setScheduleLoading(true);
-    setScheduleError("");
+  const handleSelectStreet = (street: StreetOption) => {
+    setSelectedStreet(street);
+    setStreetQuery(street.name);
+    setShowStreetSuggestions(false);
+    setSelectedHouseNumber(null);
+    setShowHouseNumberOptions(true);
     setScheduleData(null);
-    try {
-      const res = await api.get(`/api/schedule?street=${street}&hnr=${hnr}`);
-      setScheduleData(res.data);
-    } catch {
-      setScheduleError("Adresse nicht gefunden. Bitte versuchen Sie es erneut.");
-    } finally {
-      setScheduleLoading(false);
-    }
+    setScheduleError("");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSearch();
+  const handleSelectHouseNumber = (houseNumber: HouseNumberOption) => {
+    setSelectedHouseNumber(houseNumber);
+    setShowHouseNumberOptions(false);
+    if (selectedStreet) {
+      fetchSchedule(selectedStreet, houseNumber);
+    }
   };
 
   const handleSend = async (text?: string) => {
@@ -205,43 +275,79 @@ function Home() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
-          <div className="flex gap-2 sm:gap-3 flex-1">
+        {/* Street + house number search */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-1 relative">
+          <div className="flex-1 relative">
             <input
               type="text"
-              placeholder="Straße"
-              value={street}
-              onChange={(e) => setStreet(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="flex-1 rounded-xl px-4 py-3 text-white text-sm sm:text-base focus:outline-none"
+              placeholder="Straße eingeben (z. B. Hans-Sailer)"
+              value={streetQuery}
+              onChange={(e) => {
+                setStreetQuery(e.target.value);
+                setShowStreetSuggestions(true);
+                setSelectedStreet(null);
+                setSelectedHouseNumber(null);
+              }}
+              onFocus={() => setShowStreetSuggestions(true)}
+              className="w-full rounded-xl px-4 py-3 text-white text-sm sm:text-base focus:outline-none"
               style={{ background: "rgba(20, 30, 45, 0.6)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}
             />
-            <input
-              type="text"
-              placeholder="Nr."
-              value={hnr}
-              onChange={(e) => setHnr(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="w-16 sm:w-20 rounded-xl px-3 sm:px-4 py-3 text-white text-sm sm:text-base focus:outline-none"
-              style={{ background: "rgba(20, 30, 45, 0.6)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}
-            />
+
+            {showStreetSuggestions && streetSuggestions.length > 0 && (
+              <div className="absolute z-20 mt-2 w-full max-h-60 overflow-y-auto rounded-xl"
+                style={{ background: "rgba(15, 22, 35, 0.95)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}>
+                {streetSuggestions.map((s) => (
+                  <button
+                    key={s._id}
+                    onClick={() => handleSelectStreet(s)}
+                    className="w-full text-left px-4 py-2.5 text-sm transition hover:bg-white/5"
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <button
-            onClick={handleSearch}
-            className="font-semibold px-6 py-3 rounded-xl transition text-sm sm:text-base w-full sm:w-auto"
-            style={{ background: accent, color: "#060b13" }}
-          >
-            Suchen →
-          </button>
         </div>
+
+        {/* House number selection — only shown once a street has been picked */}
+        {selectedStreet && (
+          <div className="mb-3 relative">
+            <button
+              onClick={() => setShowHouseNumberOptions((prev) => !prev)}
+              className="w-full sm:w-48 rounded-xl px-4 py-3 text-left text-sm sm:text-base flex items-center justify-between"
+              style={{ background: "rgba(20, 30, 45, 0.6)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}
+            >
+              <span>{selectedHouseNumber ? `Nr. ${selectedHouseNumber.label}` : "Hausnummer wählen"}</span>
+              <span style={{ color: "rgba(255,255,255,0.4)" }}>▾</span>
+            </button>
+
+            {showHouseNumberOptions && (
+              <div className="absolute z-20 mt-2 w-full sm:w-48 max-h-60 overflow-y-auto rounded-xl"
+                style={{ background: "rgba(15, 22, 35, 0.95)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}>
+                {selectedStreet.houseNumbers.map((h) => (
+                  <button
+                    key={h.hnrId}
+                    onClick={() => handleSelectHouseNumber(h)}
+                    className="w-full text-left px-4 py-2.5 text-sm transition hover:bg-white/5"
+                  >
+                    {h.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <p className="text-xs sm:text-sm mb-8 sm:mb-10" style={{ color: "rgba(255,255,255,0.4)" }}>
           Beispiele:{" "}
           {["Anger", "Bahnhofstraße", "Krämerbrücke"].map((s) => (
             <span key={s} className="cursor-pointer transition mr-2"
               style={{ color: "rgba(255,255,255,0.6)" }}
-              onClick={() => { setStreet(s); setHnr("1"); }}>
+              onClick={() => {
+                setStreetQuery(s);
+                setShowStreetSuggestions(true);
+              }}>
               {s}
             </span>
           ))}
