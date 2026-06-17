@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Bot } from "lucide-react";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 interface WasteEntry {
   type: string;
@@ -53,6 +54,7 @@ const glassCard: React.CSSProperties = {
 };
 
 function Home() {
+  const { isAuthenticated } = useAuth();
   const [street, setStreet] = useState("");
   const [hnr, setHnr] = useState("");
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
@@ -65,11 +67,38 @@ function Home() {
   const [chatLoading, setChatLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-useEffect(() => {
-  if (messages.length > 1) {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }
-}, [messages]);
+  useEffect(() => {
+    if (messages.length > 1) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  // Load favorite address and auto-search on login
+  useEffect(() => {
+    const loadFavoriteAddress = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const res = await api.get("/api/user/profile");
+        const fav = res.data.address;
+        if (fav?.street) {
+          setStreet(fav.street);
+          setHnr(fav.houseNumber || "");
+          setScheduleLoading(true);
+          try {
+            const scheduleRes = await api.get(`/api/schedule?street=${fav.street}&hnr=${fav.houseNumber || ""}`);
+            setScheduleData(scheduleRes.data);
+          } catch {
+            // silently ignore if address not found in schedule DB
+          } finally {
+            setScheduleLoading(false);
+          }
+        }
+      } catch {
+        // not logged in or profile fetch failed, ignore
+      }
+    };
+    loadFavoriteAddress();
+  }, [isAuthenticated]);
 
   const handleSearch = async () => {
     if (!street) return;
@@ -144,13 +173,13 @@ useEffect(() => {
   const kw = getWeekNumber(today);
 
   return (
-<div className="min-h-screen text-white relative overflow-hidden" style={{
-  backgroundImage: "url('/bg.jpg')",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
-  backgroundAttachment: "fixed",
-}}>
+    <div className="min-h-screen text-white relative overflow-hidden" style={{
+      backgroundImage: "url('/bg.jpg')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      backgroundAttachment: "fixed",
+    }}>
 
       {/* Dark overlay */}
       <div className="absolute inset-0 pointer-events-none" style={{
@@ -312,31 +341,19 @@ useEffect(() => {
           </div>
 
           <div className="px-4 sm:px-5 py-4 flex flex-col gap-3 max-h-72 overflow-y-auto">
-{messages.map((msg, i) => (
-  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-    <div className="max-w-[85%] sm:max-w-xs px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
-      style={msg.role === "user"
-        ? { background: accent, color: "#060b13", fontWeight: 600, borderBottomRightRadius: 4 }
-        : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderBottomLeftRadius: 4 }
-      }>
-      {msg.content}
-    </div>
-  </div>
-))}
-{chatLoading && (
-  <div className="flex justify-start">
-    <div className="px-4 py-2.5 rounded-2xl text-sm animate-pulse"
-      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}>
-      Wird bearbeitet...
-    </div>
-  </div>
-)}
-            {chatLoading && (
-              <div className="flex items-end gap-2 justify-start">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}>
-                  <Bot size={14} color={accent} />
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className="max-w-[85%] sm:max-w-xs px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
+                  style={msg.role === "user"
+                    ? { background: accent, color: "#060b13", fontWeight: 600, borderBottomRightRadius: 4 }
+                    : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderBottomLeftRadius: 4 }
+                  }>
+                  {msg.content}
                 </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div className="flex justify-start">
                 <div className="px-4 py-2.5 rounded-2xl text-sm animate-pulse"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}>
                   Wird bearbeitet...
@@ -381,11 +398,11 @@ useEffect(() => {
           </div>
         </div>
 
-<div className="mt-10 px-6 py-4 rounded-2xl text-center" style={glassCard}>
-  <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-    Daten von <span style={{ color: accent }}>SWE Stadtwirtschaft GmbH Erfurt</span>
-  </p>
-</div>
+        <div className="mt-10 px-6 py-4 rounded-2xl text-center" style={glassCard}>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+            Daten von <span style={{ color: accent }}>SWE Stadtwirtschaft GmbH Erfurt</span>
+          </p>
+        </div>
 
       </div>
     </div>

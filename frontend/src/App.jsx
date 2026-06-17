@@ -7,6 +7,7 @@ import Register from "./pages/Register";
 import Chat from "./pages/Chat";
 import AbfallABC from "./pages/AbfallABC";
 import Map from "./pages/Map";
+import Profile from "./pages/Profile";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -28,6 +29,7 @@ function App() {
         <Route path="/chat" element={<Chat />} />
         <Route path="/map" element={<Map />} />
         <Route path="/abfall-abc" element={<AbfallABC />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </>
   );
