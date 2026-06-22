@@ -4,7 +4,7 @@ import { askAI, askAIWithPhoto } from "../services/ai.service";
 
 export const chat = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { message } = req.body;
+    const { message, language } = req.body;
 
     if (!message) {
       res.status(400).json({ error: "Message is required" });
@@ -26,7 +26,7 @@ export const chat = async (req: Request, res: Response): Promise<void> => {
         ).join("\n")
       : "No specific item found in database.";
 
-    const reply = await askAI(message, context);
+    const reply = await askAI(message, context, language);
     res.status(200).json({ reply });
   } catch (error) {
     console.error("AI chat error:", error);
@@ -36,14 +36,14 @@ export const chat = async (req: Request, res: Response): Promise<void> => {
 
 export const photoChat = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { image, mimeType } = req.body;
+    const { image, mimeType, language } = req.body;
 
     if (!image) {
       res.status(400).json({ error: "Image is required" });
       return;
     }
 
-    const reply = await askAIWithPhoto(image, mimeType ?? "image/jpeg");
+    const reply = await askAIWithPhoto(image, mimeType ?? "image/jpeg", language);
     res.status(200).json({ reply });
   } catch (error) {
     console.error("Photo chat error:", error);

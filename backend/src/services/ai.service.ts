@@ -1,16 +1,14 @@
 import dotenv from "dotenv";
+import { buildChatPrompt, getPhotoPrompt, getNoResponseFallback } from "../prompts/aiPrompts";
+
 dotenv.config();
 
-export const askAI = async (question: string, context: string): Promise<string> => {
-  const prompt = `You are a waste sorting assistant for the city of Erfurt, Germany.
-You ONLY answer questions about waste separation, recycling, and trash collection in Erfurt.
-If the user asks about anything else, politely decline in German using formal "Sie" and redirect them to ask about waste sorting.
-Always answer in German using formal "Sie" form. Be concise and helpful.
-
-Here is some context about waste items:
-${context}
-
-User question: ${question}`;
+export const askAI = async (
+  question: string,
+  context: string,
+  language?: string
+): Promise<string> => {
+  const prompt = buildChatPrompt(question, context, language);
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -25,10 +23,14 @@ User question: ${question}`;
   });
 
   const data = await response.json() as any;
-  return data.choices?.[0]?.message?.content ?? "Keine Antwort erhalten.";
+  return data.choices?.[0]?.message?.content ?? getNoResponseFallback(language);
 };
 
-export const askAIWithPhoto = async (base64Image: string, mimeType: string): Promise<string> => {
+export const askAIWithPhoto = async (
+  base64Image: string,
+  mimeType: string,
+  language?: string
+): Promise<string> => {
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -47,7 +49,7 @@ export const askAIWithPhoto = async (base64Image: string, mimeType: string): Pro
             },
             {
               type: "text",
-              text: "Sie sind ein Mülltrennungs-Assistent für Erfurt. Identifizieren Sie das Objekt im Bild und sagen Sie mir, in welche Tonne es gehört: Biotonne, Gelber Sack, Papiertonne, Restmüll oder Sondermüll. Antworten Sie auf Deutsch mit der formalen Sie-Form und fassen Sie sich kurz.",
+              text: getPhotoPrompt(language),
             },
           ],
         },
@@ -56,5 +58,5 @@ export const askAIWithPhoto = async (base64Image: string, mimeType: string): Pro
   });
 
   const data = await response.json() as any;
-  return data.choices?.[0]?.message?.content ?? "Keine Antwort erhalten.";
+  return data.choices?.[0]?.message?.content ?? getNoResponseFallback(language);
 };

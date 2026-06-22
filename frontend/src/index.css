@@ -1,1 +1,105 @@
 @import "tailwindcss";
+
+:root {
+  --accent: #00aaff;
+  --accent-bg: #060b13;
+
+  /* text shades, light to dim */
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-tertiary: rgba(255, 255, 255, 0.6);
+  --text-muted: rgba(255, 255, 255, 0.5);
+  --text-faint: rgba(255, 255, 255, 0.4);
+  --text-subtle: rgba(255, 255, 255, 0.3);
+
+  /* borders + faint backgrounds */
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --bg-subtle: rgba(255, 255, 255, 0.06);
+
+  /* accent, but lighter */
+  --accent-bg-soft: rgba(0, 170, 255, 0.15);
+  --accent-border: rgba(0, 170, 255, 0.4);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+.text-tertiary {
+  color: var(--text-tertiary);
+}
+.text-muted {
+  color: var(--text-muted);
+}
+.text-faint {
+  color: var(--text-faint);
+}
+.text-subtle {
+  color: var(--text-subtle);
+}
+.border-subtle {
+  border: 1px solid var(--border-subtle);
+}
+.bg-subtle {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+}
+
+/* blue badge style, used in a few places */
+.accent-badge {
+  background: var(--accent-bg-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+
+/* same as accent-badge but keeps its own text color */
+.accent-highlight {
+  background: var(--accent-bg-soft);
+  border: 1px solid var(--accent-border);
+}
+
+/* main glass card style, used almost everywhere */
+.glass-card {
+  background: rgba(20, 30, 45, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
+/* glass style for inputs/dropdowns */
+.glass-input {
+  background: rgba(20, 30, 45, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* dropdown panels */
+.glass-dropdown {
+  background: rgba(15, 22, 35, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* bg image used on every page */
+.page-background {
+  background-image: url('/bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* keeps bg from moving when page content changes height */
+.page-background-fixed {
+  background-attachment: fixed;
+}
+
+/* dark gradient on top of the bg image */
+.page-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(6, 11, 19, 0.65) 0%,
+    rgba(6, 11, 19, 0.45) 50%,
+    rgba(6, 11, 19, 0.75) 100%
+  );
+}

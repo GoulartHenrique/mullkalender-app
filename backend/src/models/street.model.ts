@@ -1,11 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 // A single house number entry for a street, as known by the SWE
-// (Stadtwerke Erfurt) waste calendar system. hnrId is the internal
+// waste calendar system. hnrId is the internal
 // numeric ID needed to fetch the actual collection calendar later.
 export interface IHouseNumber {
   hnrId: number;
-  label: string; // e.g. "10", "6-8", "58b,58c-59"
+  label: string; 
 }
 
 // Represents a real Erfurt street, with its SWE-internal strId and the

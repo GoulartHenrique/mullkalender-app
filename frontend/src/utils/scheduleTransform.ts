@@ -1,5 +1,5 @@
-// Maps German bin type names (as returned by the SWE Erfurt API) to the
-// display names and colors already used across the app's UI.
+// Maps German bin names from the API to the display names and colors
+// used in the app.
 const BIN_TYPE_CONFIG: Record<string, { displayName: string; color: string }> = {
   "Bio": { displayName: "Biotonne", color: "#a0522d" },
   "Papier": { displayName: "Papiertonne", color: "#60a5fa" },
@@ -11,7 +11,7 @@ const BIN_TYPE_CONFIG: Record<string, { displayName: string; color: string }> = 
 interface CollectionDay {
   day: number;
   weekday: string;
-  month: string; // e.g. "Juni 2026"
+  month: string;
   weekNumber: string;
   binTypes: string[];
 }
@@ -28,24 +28,13 @@ const GERMAN_MONTHS: Record<string, number> = {
   "Juli": 6, "August": 7, "September": 8, "Oktober": 9, "November": 10, "Dezember": 11,
 };
 
-// Converts a CollectionDay (day number + "Juni 2026" string) into a full
-// ISO date string (e.g. "2026-06-23"), since the API only gives us the
-// day number and a German month/year label, not a ready-made date.
+// Turns a day number + "Juni 2026" string into a real date like "2026-06-23"
 function toIsoDate(day: number, monthIndex: number, year: number): string {
   const date = new Date(Date.UTC(year, monthIndex, day));
   return date.toISOString().split("T")[0];
 }
 
-/**
- * Resolves the correct month/year for each CollectionDay, working around
- * a bug in the upstream SWE Erfurt API: when a calendar week spans a
- * month boundary (e.g. "KW 27" running from June 29 to July 5), the days
- * that fall in the new month are still labeled with the *previous*
- * month's name. Since the API always returns days in chronological
- * order, we detect a rollover whenever the day number drops compared to
- * the previous entry (e.g. 26 followed by 1) and advance the month
- * (and year, if rolling past December) accordingly.
- */
+// SWE API bug: new month days keep old month's label. Fixed here.
 function resolveCalendarDates(days: CollectionDay[]): { day: CollectionDay; isoDate: string }[] {
   let currentMonthIndex: number | null = null;
   let currentYear: number | null = null;
@@ -61,21 +50,18 @@ function resolveCalendarDates(days: CollectionDay[]): { day: CollectionDay; isoD
     if (labelMonthIndex === undefined || isNaN(labelYear)) continue;
 
     if (currentMonthIndex === null || currentYear === null) {
-      // First entry — trust the label as-is, nothing to compare against yet.
+      // First day, just trust the label
       currentMonthIndex = labelMonthIndex;
       currentYear = labelYear;
     } else if (day.day < previousDayNumber) {
-      // Day number went backwards (e.g. 26 -> 1): the week crossed into a
-      // new month, but the upstream label is stale. Advance the month
-      // ourselves instead of trusting day.month.
+      // Day number dropped, so I moved into a new month
       currentMonthIndex += 1;
       if (currentMonthIndex > 11) {
         currentMonthIndex = 0;
         currentYear += 1;
       }
     } else if (labelMonthIndex !== currentMonthIndex || labelYear !== currentYear) {
-      // The label itself moved forward (no rollover glitch this time) —
-      // trust it, since this means the upstream label was actually updated.
+      // Label actually changed on its own
       currentMonthIndex = labelMonthIndex;
       currentYear = labelYear;
     }
@@ -87,12 +73,8 @@ function resolveCalendarDates(days: CollectionDay[]): { day: CollectionDay; isoD
   return resolved;
 }
 
-/**
- * Transforms the raw CollectionDay[] returned by /api/schedule/lookup
- * (one entry per calendar day, with the bin types collected that day)
- * into the WasteEntry[] shape the existing UI expects (one entry per
- * bin type, with all its upcoming collection dates).
- */
+// Turns the day-by-day API response into one entry per waste type,
+// each with its list of pickup dates.
 export function transformToScheduleEntries(days: CollectionDay[]): WasteEntry[] {
   const grouped: Record<string, string[]> = {};
   const resolvedDays = resolveCalendarDates(days);
@@ -114,10 +96,9 @@ export function transformToScheduleEntries(days: CollectionDay[]): WasteEntry[] 
         type,
         color: config?.color ?? "#ffffff",
         dates: dates.sort(),
-        frequency: "", // not provided by the SWE API; left blank intentionally
+        frequency: "", // API doesn't give us this
       };
     })
-    // Sort waste types by their next upcoming date, so the soonest
-    // collection always appears first (matches the "Nächste Abholung" badge logic)
+    // Soonest pickup first
     .sort((a, b) => a.dates[0].localeCompare(b.dates[0]));
 }

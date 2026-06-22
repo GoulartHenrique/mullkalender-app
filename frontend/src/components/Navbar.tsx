@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const accent = "#00aaff";
+import { useLanguage } from "../languages/LanguageContext";
 
 function Navbar() {
   const { isAuthenticated, logout } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -13,11 +13,11 @@ function Navbar() {
   const isActive = (path: string) => location.pathname === path;
 
   const navLinks = [
-    { path: "/", label: "Kalender" },
-    { path: "/abfall-abc", label: "Abfall-ABC" },
-    { path: "/map", label: "Karte" },
-    { path: "/chat", label: "KI-Chat" },
-    ...(isAuthenticated ? [{ path: "/profile", label: "Profil" }] : []),
+    { path: "/", label: t("navbar.calendar") },
+    { path: "/abfall-abc", label: t("navbar.abfallABC") },
+    { path: "/map", label: t("navbar.map") },
+    { path: "/chat", label: t("navbar.chat") },
+    ...(isAuthenticated ? [{ path: "/profile", label: t("navbar.profile") }] : []),
   ];
 
   const handleLogout = () => {
@@ -33,33 +33,31 @@ function Navbar() {
     }}>
       <div className="flex items-center justify-between w-full">
         <Link to="/" className="text-white font-bold text-xl">
-          Müll<span style={{ color: accent }}>Kalender</span>
+          Müll<span style={{ color: "var(--accent)" }}>Kalender</span>
         </Link>
 
         {/* Desktop menu */}
         <div className="hidden sm:flex items-center gap-6">
           {navLinks.map(({ path, label }) => (
             <Link key={path} to={path} className="text-sm transition"
-              style={{ color: isActive(path) ? accent : "rgba(255,255,255,0.5)" }}>
+              style={{ color: isActive(path) ? "var(--accent)" : "var(--text-muted)" }}>
               {label}
             </Link>
           ))}
           {isAuthenticated ? (
-            <button onClick={handleLogout} className="text-sm transition"
-              style={{ color: "rgba(255,255,255,0.5)" }}>
-              Abmelden
+            <button onClick={handleLogout} className="text-muted text-sm transition">
+              {t("navbar.logout")}
             </button>
           ) : (
             <Link to="/login" className="font-semibold px-4 py-2 rounded-lg text-sm transition"
-              style={{ background: accent, color: "#060b13" }}>
-              Anmelden
+              style={{ background: "var(--accent)", color: "var(--accent-bg)" }}>
+              {t("navbar.login")}
             </Link>
           )}
         </div>
 
         {/* Mobile hamburger */}
-        <button className="sm:hidden text-lg transition"
-          style={{ color: "rgba(255,255,255,0.6)" }}
+        <button className="text-tertiary sm:hidden text-lg transition"
           onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? "✕" : "☰"}
         </button>
@@ -71,23 +69,22 @@ function Navbar() {
           style={{ borderTop: "1px solid rgba(0,170,255,0.15)" }}>
           {navLinks.map(({ path, label }) => (
             <Link key={path} to={path} className="text-sm transition"
-              style={{ color: isActive(path) ? accent : "rgba(255,255,255,0.5)" }}
+              style={{ color: isActive(path) ? "var(--accent)" : "var(--text-muted)" }}
               onClick={() => setMenuOpen(false)}>
               {label}
             </Link>
           ))}
           {isAuthenticated ? (
             <button onClick={() => { handleLogout(); setMenuOpen(false); }}
-              className="text-sm transition"
-              style={{ color: "rgba(255,255,255,0.5)" }}>
-              Abmelden
+              className="text-muted text-sm transition">
+              {t("navbar.logout")}
             </button>
           ) : (
             <Link to="/login"
               className="font-semibold px-4 py-2 rounded-lg text-sm transition"
-              style={{ background: accent, color: "#060b13" }}
+              style={{ background: "var(--accent)", color: "var(--accent-bg)" }}
               onClick={() => setMenuOpen(false)}>
-              Anmelden
+              {t("navbar.login")}
             </Link>
           )}
         </div>

@@ -1,119 +1,36 @@
-import { useState, useRef, useEffect } from "react";
-import { Bot } from "lucide-react";
+import { useState, useEffect } from "react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { transformToScheduleEntries } from "../utils/scheduleTransform";
-
-interface WasteEntry {
-  type: string;
-  color: string;
-  dates: string[];
-  frequency: string;
-}
-
-interface HouseNumberOption {
-  hnrId: number;
-  label: string;
-}
-
-interface StreetOption {
-  _id: string;
-  name: string;
-  strId: number;
-  houseNumbers: HouseNumberOption[];
-}
-
-interface ScheduleData {
-  street: string;
-  houseNumber: string;
-  district: string;
-  schedule: WasteEntry[];
-}
-
-interface Message {
-  role: "user" | "ai";
-  content: string;
-}
-
-const descriptions: Record<string, string> = {
-  "Biotonne": "Bioabfälle, Lebensmittelreste",
-  "Gelber Sack": "Verpackungen, Plastik, Metall",
-  "Papiertonne": "Papier, Pappe, Karton",
-  "Restmüll": "Hausmüll, nicht trennbarer Abfall",
-};
-
-const suggestions = [
-  "Wo kommt eine Batterie rein?",
-  "Ist Pizzakarton Papiertonne?",
-  "Was gehört in den Gelben Sack?",
-  "Wo entsorge ich Medikamente?",
-];
-
-const getWeekNumber = (date: Date) => {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-};
-
-const accent = "#00aaff";
-
-const glassCard: React.CSSProperties = {
-  background: "rgba(20, 30, 45, 0.4)",
-  backdropFilter: "blur(12px)",
-  border: "1px solid rgba(255, 255, 255, 0.1)",
-  borderRadius: "16px",
-};
+import { getUpcomingReminders } from "../utils/reminders";
+import ReminderBanner from "../components/ReminderBanner";
+import HomeHero from "../components/home/HomeHero";
+import AddressSearch from "../components/home/AddressSearch";
+import ScheduleDisplay from "../components/home/ScheduleDisplay";
+import ChatWidget from "../components/home/ChatWidget";
+import { useLanguage } from "../languages/LanguageContext";
+import { ScheduleData } from "../types/schedule";
+import { StreetOption, HouseNumberOption } from "../types/address";
 
 function Home() {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
-  // Street autocomplete state
+  // Address selection state, owned here because it needs to be set
+  // both by user interaction (via AddressSearch) and by the favorite
+  // address auto-load effect below.
   const [streetQuery, setStreetQuery] = useState("");
-  const [streetSuggestions, setStreetSuggestions] = useState<StreetOption[]>([]);
-  const [showStreetSuggestions, setShowStreetSuggestions] = useState(false);
   const [selectedStreet, setSelectedStreet] = useState<StreetOption | null>(null);
-
-  // House number selection state
   const [selectedHouseNumber, setSelectedHouseNumber] = useState<HouseNumberOption | null>(null);
-  const [showHouseNumberOptions, setShowHouseNumberOptions] = useState(false);
 
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleError, setScheduleError] = useState("");
 
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "ai", content: "Hallo! Ich helfe Ihnen bei Fragen zur Mülltrennung in Erfurt. Was möchten Sie wissen? 🗑️" }
-  ]);
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (messages.length > 1) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
-
-  // Debounced street search against the local /api/streets/search endpoint
-  useEffect(() => {
-    if (streetQuery.trim().length < 2) {
-      setStreetSuggestions([]);
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
-      try {
-        const res = await api.get(`/api/streets/search?q=${encodeURIComponent(streetQuery)}`);
-        setStreetSuggestions(res.data);
-      } catch {
-        setStreetSuggestions([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [streetQuery]);
+  const [notificationSettings, setNotificationSettings] = useState<{ enabled: boolean; daysBefore: number }>({
+    enabled: false,
+    daysBefore: 1,
+  });
 
   // Fetches and transforms the live collection calendar for a chosen
   // street + house number combination.
@@ -133,7 +50,7 @@ function Home() {
         schedule: entries,
       });
     } catch {
-      setScheduleError("Termine konnten nicht geladen werden. Bitte versuchen Sie es erneut.");
+      setScheduleError(t("home.scheduleError"));
     } finally {
       setScheduleLoading(false);
     }
@@ -146,6 +63,14 @@ function Home() {
       try {
         const res = await api.get("/api/user/profile");
         const fav = res.data.address;
+
+        if (res.data.notifications) {
+          setNotificationSettings({
+            enabled: !!res.data.notifications.enabled,
+            daysBefore: res.data.notifications.daysBefore ?? 1,
+          });
+        }
+
         if (fav?.street) {
           const streetRes = await api.get(`/api/streets/search?q=${encodeURIComponent(fav.street)}`);
           const matchedStreet: StreetOption | undefined = streetRes.data.find(
@@ -171,342 +96,62 @@ function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  const handleStreetQueryChange = (query: string) => {
+    setStreetQuery(query);
+    setSelectedStreet(null);
+    setSelectedHouseNumber(null);
+  };
+
   const handleSelectStreet = (street: StreetOption) => {
     setSelectedStreet(street);
     setStreetQuery(street.name);
-    setShowStreetSuggestions(false);
     setSelectedHouseNumber(null);
-    setShowHouseNumberOptions(true);
     setScheduleData(null);
     setScheduleError("");
   };
 
   const handleSelectHouseNumber = (houseNumber: HouseNumberOption) => {
     setSelectedHouseNumber(houseNumber);
-    setShowHouseNumberOptions(false);
     if (selectedStreet) {
       fetchSchedule(selectedStreet, houseNumber);
     }
   };
 
-  const handleSend = async (text?: string) => {
-    const message = text ?? chatInput;
-    if (!message.trim()) return;
-    setMessages((prev) => [...prev, { role: "user", content: message }]);
-    setChatInput("");
-    setChatLoading(true);
-    try {
-      const res = await api.post("/api/ai/chat", { message });
-      setMessages((prev) => [...prev, { role: "ai", content: res.data.reply }]);
-    } catch {
-      setMessages((prev) => [...prev, { role: "ai", content: "Es gab einen Fehler. Bitte versuchen Sie es erneut." }]);
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
-  const handleChatKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSend();
-  };
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(",")[1];
-      const mimeType = file.type;
-      setMessages((prev) => [...prev, { role: "user", content: "📷 Foto gesendet" }]);
-      setChatLoading(true);
-      try {
-        const res = await api.post("/api/ai/photo", { image: base64, mimeType });
-        setMessages((prev) => [...prev, { role: "ai", content: res.data.reply }]);
-      } catch {
-        setMessages((prev) => [...prev, { role: "ai", content: "Es gab einen Fehler. Bitte versuchen Sie es erneut." }]);
-      } finally {
-        setChatLoading(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  const weekDays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-  const week = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
-  const kw = getWeekNumber(today);
+  const upcomingReminders = scheduleData && notificationSettings.enabled
+    ? getUpcomingReminders(scheduleData.schedule, notificationSettings.daysBefore)
+    : [];
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden" style={{
-      backgroundImage: "url('/bg.jpg')",
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",
-      backgroundAttachment: "fixed",
-    }}>
+    <div className="page-background page-background-fixed min-h-screen text-white relative overflow-hidden">
 
       {/* Dark overlay */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        background: "linear-gradient(to bottom, rgba(6,11,19,0.65) 0%, rgba(6,11,19,0.45) 50%, rgba(6,11,19,0.75) 100%)"
-      }} />
+      <div className="page-overlay" />
 
       <div className="relative max-w-3xl mx-auto px-4 py-8 sm:py-16">
 
-        {/* Hero */}
-        <div className="text-center mb-8 sm:mb-10">
-          <div className="w-full px-8 py-6 rounded-2xl mb-6" style={glassCard}>
-            <span className="inline-block text-xs font-semibold tracking-widest uppercase px-4 py-1.5 rounded-full mb-5"
-              style={{ background: "rgba(0,170,255,0.15)", border: "1px solid rgba(0,170,255,0.4)", color: accent }}>
-              📍 Erfurt · SWE Stadtwirtschaft
-            </span>
-            <h1 className="text-3xl sm:text-5xl font-bold mb-4 leading-tight">
-              Müll richtig trennen,<br />
-              <span style={{ color: accent }}>Termine nie vergessen</span>
-            </h1>
-            <p className="text-base sm:text-lg max-w-xl mx-auto" style={{ color: "rgba(255,255,255,0.7)" }}>
-              Geben Sie Ihre Adresse ein und sehen Sie sofort, wann welche Tonne abgeholt wird. Fragen Sie unsere KI, wohin jedes Teil gehört.
-            </p>
-          </div>
-        </div>
+        <HomeHero />
 
-        {/* Street + house number search */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-1 relative">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              placeholder="Straße eingeben (z. B. Hans-Sailer)"
-              value={streetQuery}
-              onChange={(e) => {
-                setStreetQuery(e.target.value);
-                setShowStreetSuggestions(true);
-                setSelectedStreet(null);
-                setSelectedHouseNumber(null);
-              }}
-              onFocus={() => setShowStreetSuggestions(true)}
-              className="w-full rounded-xl px-4 py-3 text-white text-sm sm:text-base focus:outline-none"
-              style={{ background: "rgba(20, 30, 45, 0.6)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}
-            />
+        <ReminderBanner reminders={upcomingReminders} />
 
-            {showStreetSuggestions && streetSuggestions.length > 0 && (
-              <div className="absolute z-20 mt-2 w-full max-h-60 overflow-y-auto rounded-xl"
-                style={{ background: "rgba(15, 22, 35, 0.95)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}>
-                {streetSuggestions.map((s) => (
-                  <button
-                    key={s._id}
-                    onClick={() => handleSelectStreet(s)}
-                    className="w-full text-left px-4 py-2.5 text-sm transition hover:bg-white/5"
-                  >
-                    {s.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <AddressSearch
+          streetQuery={streetQuery}
+          selectedStreet={selectedStreet}
+          selectedHouseNumber={selectedHouseNumber}
+          onStreetQueryChange={handleStreetQueryChange}
+          onSelectStreet={handleSelectStreet}
+          onSelectHouseNumber={handleSelectHouseNumber}
+        />
 
-        {/* House number selection — only shown once a street has been picked */}
-        {selectedStreet && (
-          <div className="mb-3 relative">
-            <button
-              onClick={() => setShowHouseNumberOptions((prev) => !prev)}
-              className="w-full sm:w-48 rounded-xl px-4 py-3 text-left text-sm sm:text-base flex items-center justify-between"
-              style={{ background: "rgba(20, 30, 45, 0.6)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}
-            >
-              <span>{selectedHouseNumber ? `Nr. ${selectedHouseNumber.label}` : "Hausnummer wählen"}</span>
-              <span style={{ color: "rgba(255,255,255,0.4)" }}>▾</span>
-            </button>
-
-            {showHouseNumberOptions && (
-              <div className="absolute z-20 mt-2 w-full sm:w-48 max-h-60 overflow-y-auto rounded-xl"
-                style={{ background: "rgba(15, 22, 35, 0.95)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}>
-                {selectedStreet.houseNumbers.map((h) => (
-                  <button
-                    key={h.hnrId}
-                    onClick={() => handleSelectHouseNumber(h)}
-                    className="w-full text-left px-4 py-2.5 text-sm transition hover:bg-white/5"
-                  >
-                    {h.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <p className="text-xs sm:text-sm mb-8 sm:mb-10" style={{ color: "rgba(255,255,255,0.4)" }}>
-          Beispiele:{" "}
-          {["Anger", "Bahnhofstraße", "Krämerbrücke"].map((s) => (
-            <span key={s} className="cursor-pointer transition mr-2"
-              style={{ color: "rgba(255,255,255,0.6)" }}
-              onClick={() => {
-                setStreetQuery(s);
-                setShowStreetSuggestions(true);
-              }}>
-              {s}
-            </span>
-          ))}
-        </p>
-
-        {scheduleLoading && <p className="text-center mb-10 animate-pulse" style={{ color: "rgba(255,255,255,0.5)" }}>Wird geladen...</p>}
+        {scheduleLoading && <p className="text-center mb-10 animate-pulse" style={{ color: "rgba(255,255,255,0.5)" }}>{t("home.loading")}</p>}
         {scheduleError && <p className="text-red-400 text-center mb-10">{scheduleError}</p>}
 
-        {/* Schedule data */}
-        {scheduleData && (
-          <div className="mb-10 sm:mb-12">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-1">
-              <h2 className="text-lg sm:text-xl font-bold">Nächste Abholtermine</h2>
-              <span className="text-xs sm:text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
-                {scheduleData.street} {scheduleData.houseNumber} · {scheduleData.district}
-              </span>
-            </div>
+        {scheduleData && <ScheduleDisplay scheduleData={scheduleData} />}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-              {scheduleData.schedule.map((entry, i) => {
-                const nextDate = new Date(entry.dates[0]);
-                const day = nextDate.toLocaleDateString("de-DE", { day: "2-digit" });
-                const month = nextDate.toLocaleDateString("de-DE", { month: "short" });
-                return (
-                  <div key={entry.type} className="p-4 sm:p-5 flex items-center justify-between"
-                    style={{
-                      ...glassCard,
-                      borderColor: i === 0 ? "rgba(0,170,255,0.5)" : "rgba(255,255,255,0.1)",
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                      <div>
-                        <p className="font-bold text-sm">{entry.type}</p>
-                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>{descriptions[entry.type]}</p>
-                        {i === 0 && (
-                          <span className="inline-block mt-1.5 text-xs px-2 py-0.5 rounded-lg"
-                            style={{ background: "rgba(0,170,255,0.15)", color: accent, border: "1px solid rgba(0,170,255,0.4)" }}>
-                            Nächste Abholung
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-bold text-2xl sm:text-3xl leading-none" style={{ color: entry.color }}>{day}</p>
-                      <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>{month}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        <ChatWidget />
 
-            {/* Weekly strip */}
-            <div className="p-4 sm:p-5" style={glassCard}>
-              <p className="text-xs uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.3)" }}>
-                Diese Woche — KW {kw}
-              </p>
-              <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                {week.map((d, i) => {
-                  const dateStr = d.toISOString().split("T")[0];
-                  const isToday = d.toDateString() === today.toDateString();
-                  const dots = scheduleData.schedule.filter((entry) => entry.dates.includes(dateStr));
-                  return (
-                    <div key={i} className="flex flex-col items-center gap-1 py-2 rounded-xl"
-                      style={isToday ? { background: "rgba(0,170,255,0.15)", border: "1px solid rgba(0,170,255,0.4)" } : {}}>
-                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{weekDays[i]}</span>
-                      <span className="font-bold text-xs sm:text-sm" style={{ color: isToday ? accent : "white" }}>
-                        {d.toLocaleDateString("de-DE", { day: "2-digit" })}
-                      </span>
-                      <div className="flex gap-0.5 sm:gap-1">
-                        {dots.map((dot, j) => (
-                          <div key={j} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: dot.color }} />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Chat */}
-        <div className="overflow-hidden" style={glassCard}>
-          <div className="flex items-center gap-3 px-4 sm:px-5 py-4"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}>
-              <Bot size={18} color={accent} />
-            </div>
-            <div>
-              <p className="font-semibold text-sm">MüllBot</p>
-              <p className="text-xs" style={{ color: accent }}>KI-Assistent · Erfurt</p>
-            </div>
-            <div className="ml-auto w-2 h-2 rounded-full"
-              style={{ background: accent, boxShadow: `0 0 8px ${accent}` }} />
-          </div>
-
-          <div className="px-4 sm:px-5 py-4 flex flex-col gap-3 max-h-72 overflow-y-auto">
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className="max-w-[85%] sm:max-w-xs px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
-                  style={msg.role === "user"
-                    ? { background: accent, color: "#060b13", fontWeight: 600, borderBottomRightRadius: 4 }
-                    : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderBottomLeftRadius: 4 }
-                  }>
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-            {chatLoading && (
-              <div className="flex justify-start">
-                <div className="px-4 py-2.5 rounded-2xl text-sm animate-pulse"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}>
-                  Wird bearbeitet...
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          {messages.length === 1 && (
-            <div className="px-4 sm:px-5 pb-3 flex flex-wrap gap-2">
-              {suggestions.map((s) => (
-                <button key={s} onClick={() => handleSend(s)}
-                  className="text-xs px-3 py-1.5 rounded-xl transition"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="px-3 sm:px-4 py-3 flex gap-2 sm:gap-3 items-center"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-            <label className="cursor-pointer text-xl shrink-0" style={{ color: "rgba(255,255,255,0.4)" }}>
-              📷
-              <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-            </label>
-            <input
-              type="text"
-              placeholder="Wo kommt... rein?"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={handleChatKeyDown}
-              className="flex-1 rounded-xl px-3 sm:px-4 py-2.5 text-white text-sm focus:outline-none"
-              style={{ background: "rgba(20, 30, 45, 0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
-            />
-            <button onClick={() => handleSend()} disabled={chatLoading}
-              className="font-bold px-3 sm:px-4 py-2.5 rounded-xl transition shrink-0 disabled:opacity-50"
-              style={{ background: accent, color: "#060b13" }}>
-              →
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-10 px-6 py-4 rounded-2xl text-center" style={glassCard}>
+        <div className="glass-card mt-10 px-6 py-4 rounded-2xl text-center">
           <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-            Daten von <span style={{ color: accent }}>SWE Stadtwirtschaft GmbH Erfurt</span>
+            {t("home.footer")} <span style={{ color: "var(--accent)" }}>SWE Stadtwirtschaft GmbH Erfurt</span>
           </p>
         </div>
 
