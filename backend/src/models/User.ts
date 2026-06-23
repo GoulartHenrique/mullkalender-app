@@ -28,7 +28,7 @@ const UserSchema = new Schema<IUser>(
       enabled: { type: Boolean, default: true },
       daysBefore: { type: Number, default: 1 },
     },
-    language: { type: String, enum: ["de", "en", "pt"], default: "de" },
+    language: { type: String, enum: ["de", "en"], default: "de" },
   },
   { timestamps: true },
 );

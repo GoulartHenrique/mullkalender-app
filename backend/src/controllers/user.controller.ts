@@ -15,14 +15,21 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
+const ALLOWED_LANGUAGES = ["de", "en"];
+
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { address, notifications, language } = req.body;
 
+    if (language !== undefined && !ALLOWED_LANGUAGES.includes(language)) {
+      res.status(400).json({ error: `language must be one of: ${ALLOWED_LANGUAGES.join(", ")}` });
+      return;
+    }
+
     const user = await User.findByIdAndUpdate(
       req.userId,
       { $set: { address, notifications, language } },
-      { new: true },
+      { new: true, runValidators: true },
     ).select("-passwordHash");
 
     if (!user) {

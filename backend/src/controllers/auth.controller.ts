@@ -2,11 +2,10 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
+import { getJwtSecret } from "../utils/jwtSecret";
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("Register body:", req.body); // temporary log
-
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -32,8 +31,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("Login body:", req.body); // temporary log
-
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -55,7 +52,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET ?? "secret",
+      getJwtSecret(),
       { expiresIn: "7d" },
     );
 

@@ -1,74 +1,10 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
-import Schedule from "./models/Schedule";
 import WasteItem from "./models/WasteItem";
 import User from "./models/User";
 
 dotenv.config();
-
-const schedules = [
-  {
-    street: "Anger",
-    houseNumber: "1",
-    district: "Altstadt",
-    city: "Erfurt",
-    schedule: [
-      { type: "Biotonne", color: "#4ade80", dates: ["2026-06-22", "2026-07-06", "2026-07-20"], frequency: "biweekly" },
-      { type: "Gelber Sack", color: "#facc15", dates: ["2026-06-19", "2026-07-03", "2026-07-17"], frequency: "biweekly" },
-      { type: "Papiertonne", color: "#60a5fa", dates: ["2026-06-29", "2026-07-27"], frequency: "monthly" },
-      { type: "Restmüll", color: "#6b7280", dates: ["2026-06-22", "2026-07-06", "2026-07-20"], frequency: "biweekly" },
-    ],
-  },
-  {
-    street: "Juri-Gagarin-Ring",
-    houseNumber: "1",
-    district: "Mitte",
-    city: "Erfurt",
-    schedule: [
-      { type: "Biotonne", color: "#4ade80", dates: ["2026-06-23", "2026-07-07", "2026-07-21"], frequency: "biweekly" },
-      { type: "Gelber Sack", color: "#facc15", dates: ["2026-06-25", "2026-07-09", "2026-07-23"], frequency: "biweekly" },
-      { type: "Papiertonne", color: "#60a5fa", dates: ["2026-06-30", "2026-07-28"], frequency: "monthly" },
-      { type: "Restmüll", color: "#6b7280", dates: ["2026-06-23", "2026-07-07", "2026-07-21"], frequency: "biweekly" },
-    ],
-  },
-  {
-    street: "Krämerbrücke",
-    houseNumber: "1",
-    district: "Altstadt",
-    city: "Erfurt",
-    schedule: [
-      { type: "Biotonne", color: "#4ade80", dates: ["2026-06-22", "2026-07-06", "2026-07-20"], frequency: "biweekly" },
-      { type: "Gelber Sack", color: "#facc15", dates: ["2026-06-19", "2026-07-03", "2026-07-17"], frequency: "biweekly" },
-      { type: "Papiertonne", color: "#60a5fa", dates: ["2026-06-29", "2026-07-27"], frequency: "monthly" },
-      { type: "Restmüll", color: "#6b7280", dates: ["2026-06-22", "2026-07-06", "2026-07-20"], frequency: "biweekly" },
-    ],
-  },
-  {
-    street: "Bahnhofstraße",
-    houseNumber: "1",
-    district: "Mitte",
-    city: "Erfurt",
-    schedule: [
-      { type: "Biotonne", color: "#4ade80", dates: ["2026-06-24", "2026-07-08", "2026-07-22"], frequency: "biweekly" },
-      { type: "Gelber Sack", color: "#facc15", dates: ["2026-06-27", "2026-07-11", "2026-07-25"], frequency: "biweekly" },
-      { type: "Papiertonne", color: "#60a5fa", dates: ["2026-07-01", "2026-07-29"], frequency: "monthly" },
-      { type: "Restmüll", color: "#6b7280", dates: ["2026-06-24", "2026-07-08", "2026-07-22"], frequency: "biweekly" },
-    ],
-  },
-  {
-    street: "Schlösserstraße",
-    houseNumber: "1",
-    district: "Altstadt",
-    city: "Erfurt",
-    schedule: [
-      { type: "Biotonne", color: "#4ade80", dates: ["2026-06-22", "2026-07-06", "2026-07-20"], frequency: "biweekly" },
-      { type: "Gelber Sack", color: "#facc15", dates: ["2026-06-19", "2026-07-03", "2026-07-17"], frequency: "biweekly" },
-      { type: "Papiertonne", color: "#60a5fa", dates: ["2026-06-29", "2026-07-27"], frequency: "monthly" },
-      { type: "Restmüll", color: "#6b7280", dates: ["2026-06-22", "2026-07-06", "2026-07-20"], frequency: "biweekly" },
-    ],
-  },
-];
 
 const wasteItems = [
   { name: "Batterie", aliases: ["Akku", "battery"], category: "Sondermüll", bin: null, instruction: "Abgabe im Supermarkt oder Wertstoffhof. Nicht in den Hausmüll!", dropOffPoints: ["REWE", "Kaufland", "Wertstoffhof Erfurt"], icon: "🔋" },
@@ -92,15 +28,11 @@ const seedDB = async () => {
     console.log("MongoDB connected");
 
     // Clear collections before inserting
-    await Schedule.deleteMany({});
     await WasteItem.deleteMany({});
     await User.deleteMany({});
     console.log("Collections cleared");
 
     // Insert data
-    await Schedule.insertMany(schedules);
-    console.log(`${schedules.length} schedules inserted`);
-
     await WasteItem.insertMany(wasteItems);
     console.log(`${wasteItems.length} waste items inserted`);
 

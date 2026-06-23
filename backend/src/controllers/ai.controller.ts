@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import WasteItem from "../models/WasteItem";
 import { askAI, askAIWithPhoto } from "../services/ai.service";
+import { escapeRegex } from "../utils/escapeRegex";
 
 export const chat = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -12,10 +13,11 @@ export const chat = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Search for relevant waste items in DB
+    const safePattern = escapeRegex(message);
     const items = await WasteItem.find({
       $or: [
-        { name: { $regex: new RegExp(message, "i") } },
-        { aliases: { $regex: new RegExp(message, "i") } },
+        { name: { $regex: new RegExp(safePattern, "i") } },
+        { aliases: { $regex: new RegExp(safePattern, "i") } },
       ],
     });
 

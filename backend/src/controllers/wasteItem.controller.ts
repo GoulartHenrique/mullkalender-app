@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import WasteItem from "../models/WasteItem";
+import { escapeRegex } from "../utils/escapeRegex";
 
 export const searchWasteItem = async (
   req: Request,
@@ -13,10 +14,12 @@ export const searchWasteItem = async (
       return;
     }
 
+    const safePattern = escapeRegex(String(q));
+
     const items = await WasteItem.find({
       $or: [
-        { name: { $regex: new RegExp(String(q), "i") } },
-        { aliases: { $regex: new RegExp(String(q), "i") } },
+        { name: { $regex: new RegExp(safePattern, "i") } },
+        { aliases: { $regex: new RegExp(safePattern, "i") } },
       ],
     });
 
